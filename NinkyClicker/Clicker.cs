@@ -3,7 +3,7 @@ using NinkyNonk.Shared.Environment;
 
 namespace NinkyClicker;
 
-public abstract class Clicker
+public abstract class Clicker : IDisposable
 {
     private uint _shouldClick = 1;
     private bool _isLeftClick;
@@ -11,25 +11,34 @@ public abstract class Clicker
     private uint _clicks;
 
     private readonly int _sleepTime;
+    
+    public bool Running { get; private set; }
 
 
     protected Clicker(ushort cps)
     {
         _sleepTime = (int) Math.Round((float)(1000 / cps)) - 20;
+        Running = true;
     }
 
     public void Start()
     {
-        Project.LoggingProxy.LogInfo("Starting...");
+        Project.LoggingProxy.LogInfo("Starting threads...");
         ThreadPool.QueueUserWorkItem(_ => ModifyThread());
         ThreadPool.QueueUserWorkItem(_ => ClickThread());
         ThreadPool.QueueUserWorkItem(_ => LogThread());
         Project.LoggingProxy.LogSuccess($"Started a new {GetType().Name} successfully");
     }
 
+    public void StartLoop()
+    {
+        Start();
+        while (Running) { }
+    }
+    
     private void ModifyThread()
     {
-        while (true)
+        while (Running)
         {
             bool shouldClick = !KeyHelper.IsHeld(VirtualKey.LControl);
             if (_shouldClick == 1 && !shouldClick)
@@ -44,17 +53,17 @@ public abstract class Clicker
 
     private void LogThread()
     {
-        while (true)
+        while (Running)
         {
             Thread.Sleep(300000);
-            Project.LoggingProxy.LogUpdate($"{_clicks} in the past 5 minutes.");
+            Project.LoggingProxy.LogUpdate($"{_clicks} clicks in the past 5 minutes.");
             Interlocked.Exchange(ref _clicks, 0);
         }
     }
 
     private void ClickThread()
     {
-        while (true)
+        while (Running)
         {
             Thread.Sleep(_sleepTime);
             
@@ -72,4 +81,11 @@ public abstract class Clicker
 
     protected abstract void LeftClick();
     protected abstract void RightClick();
+
+    public void Dispose()
+    {
+        Project.LoggingProxy.LogInfo("Stopping clicker...");
+        Running = false;
+        GC.SuppressFinalize(this);
+    }
 }

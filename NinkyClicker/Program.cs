@@ -22,7 +22,8 @@ switch (args.Length)
         break;
     case 2:
         cpsEntry = args[0];
-        program = Process.GetProcesses().First(p => p.ProcessName.ToLower().Contains(args[1]));
+        Project.LoggingProxy.LogInfo("Obtaining handle for " + args[1]);
+        program = Process.GetProcesses().First(p => p.ProcessName.ToLower().Contains(args[1]) || p.MainWindowTitle.ToLower().Contains(args[1]));
         break;
 }
 
@@ -35,16 +36,18 @@ else
     if (program == null)
     {
         string search = Project.LoggingProxy.AskInput("Search programs: ");
-        Process[] programs = Process.GetProcesses().Where(p => p.ProcessName.ToLower().Contains(search)).ToArray();
+        Process[] programs = Process.GetProcesses().Where(p => p.ProcessName.ToLower().Contains(search) || p.MainWindowTitle.ToLower().Contains(search)).ToArray();
+        
         for (int i = 0; i < programs.Length && i < 5; i++)
-            Project.LoggingProxy.Log(
-                $"{i + 1}. {programs[i].ProcessName} {programs[i].Id} {programs[i].MainWindowTitle}");
-        int index = Convert.ToInt32(Project.LoggingProxy.AskInput("Enter program index: "));
+            Project.LoggingProxy.Log($"{i + 1}. {programs[i].ProcessName} {programs[i].Id} {programs[i].MainWindowTitle}");
+        
+        int index = Convert.ToInt32(Project.LoggingProxy.AskInput("Enter program index (1-5): "));
         program = programs[index - 1];
     }
 
     c = new MessageClicker(cps, program);
 }
 
-c.Start();
-Console.ReadLine();
+c.StartLoop();
+Project.LoggingProxy.Log("Clicker has stopped, press any key to exit");
+Console.ReadKey();
