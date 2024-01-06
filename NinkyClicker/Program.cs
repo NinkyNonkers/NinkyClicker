@@ -7,7 +7,6 @@ using NinkyClicker.Message;
 using NinkyNonk.Shared.Environment;
 
 Project.LoggingProxy.LogProgramInfo();
-Project.LoggingProxy.LogInfo("Starting...");
 
 Clicker c;
 string cpsEntry;
@@ -48,5 +47,4 @@ else
 }
 
 c.Start();
-Project.LoggingProxy.LogSuccess("Started, don't close!");
 Console.ReadLine();
