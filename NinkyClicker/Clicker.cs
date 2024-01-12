@@ -13,8 +13,7 @@ public abstract class Clicker : IDisposable
     private readonly int _sleepTime;
     
     public bool Running { get; private set; }
-
-
+    
     protected Clicker(ushort cps)
     {
         _sleepTime = (int) Math.Round((float)(1000 / cps)) - 20;
@@ -23,17 +22,12 @@ public abstract class Clicker : IDisposable
 
     public void Start()
     {
-        Project.LoggingProxy.LogInfo("Starting threads...");
+        Project.LoggingProxy.LogInfo($"Starting {GetType().Name}...");
+        Project.LoggingProxy.LogInfo("Queuing threads...");
         ThreadPool.QueueUserWorkItem(_ => ModifyThread());
         ThreadPool.QueueUserWorkItem(_ => ClickThread());
         ThreadPool.QueueUserWorkItem(_ => LogThread());
         Project.LoggingProxy.LogSuccess($"Started a new {GetType().Name} successfully");
-    }
-
-    public void StartLoop()
-    {
-        Start();
-        while (Running) { }
     }
     
     private void ModifyThread()
@@ -74,6 +68,7 @@ public abstract class Clicker : IDisposable
             
             if (_isLeftClick)
                 LeftClick();
+            
             if (_isRightClick)
                 RightClick();
         }

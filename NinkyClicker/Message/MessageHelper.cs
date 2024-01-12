@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
-using NinkyClicker.Input.Flags;
 using NinkyClicker.Keys;
 
 namespace NinkyClicker.Message;
