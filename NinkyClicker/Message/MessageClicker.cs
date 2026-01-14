@@ -17,17 +17,19 @@ public class MessageClicker : Clicker
     protected override void LeftClick()
     {
         CheckProcess();
-        _proc.Send(MessageType.LButtonDown, MessageParameter.LButton, VirtualKey.LButton);
-        Thread.Sleep(5);
-        _proc.Send(MessageType.LButtonUp, MessageParameter.LButton, VirtualKey.LButton);
+        _proc.Send(PushType.Down, MessageParameter.LButton, VirtualKey.LButton);
+        Thread.Sleep(SleepTime / 2 + 5);
+        _proc.Send(PushType.Up, MessageParameter.LButton, VirtualKey.LButton);
+        Thread.Sleep(SleepTime / 2);
     }
 
     protected override void RightClick()
     {
         CheckProcess();
-        _proc.Send(MessageType.RButtonDown, MessageParameter.RButton, VirtualKey.RButton);
-        Thread.Sleep(5);
-        _proc.Send(MessageType.RButtonUp, MessageParameter.RButton, VirtualKey.RButton);
+        _proc.Send(PushType.Down, MessageParameter.RButton, VirtualKey.RButton);
+        Thread.Sleep(SleepTime / 2 + 5);
+        _proc.Send(PushType.Up, MessageParameter.RButton, VirtualKey.RButton);
+        Thread.Sleep(SleepTime / 2);
     }
 
     private void CheckProcess()

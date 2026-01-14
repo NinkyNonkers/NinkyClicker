@@ -22,13 +22,13 @@ switch (args.Length)
         break;
     case 2:
         cpsEntry = args[0];
-        Project.LoggingProxy.LogInfo("Obtaining handle for " + args[1]);
+        Project.LoggingProxy.LogInfo("Obtaining handle for " + args[1] + "...");
         program = Process.GetProcesses().First(p => p.Id != Project.CurrentProcess.Id && (p.ProcessName.ToLower().Contains(args[1]) || p.MainWindowTitle.ToLower().Contains(args[1])));
         break;
 }
 
 ushort cps = ushort.Parse(cpsEntry);
-
+Project.LoggingProxy.LogUpdate("Specific program clicking does not support all applications; use global clicker instead where possible");
 if (program == null && !Project.LoggingProxy.AskInputBool("Specific program?"))
     c = new InputClicker(cps);
 else
@@ -37,6 +37,7 @@ else
         program = ProcessHelper.SearchProcesses(Project.LoggingProxy.AskInput("Search processes: "));
     c = new MessageClicker(cps, program);
 }
+
 
 c.Start();
 

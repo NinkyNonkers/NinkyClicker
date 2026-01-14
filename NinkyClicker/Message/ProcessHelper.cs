@@ -1,14 +1,21 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using NinkyNonk.Shared.Environment;
 
 namespace NinkyClicker.Message;
 
 public static class ProcessHelper
 {
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(IntPtr hWnd);
+    
     public static Process? SearchProcesses(string search)
     {
         Project.LoggingProxy.LogInfo($"Searching programs for '{search}'...");
-        Process[] programs = Process.GetProcesses().Where(p => p.Id != Project.CurrentProcess.Id && (p.ProcessName.ToLower().Contains(search) || p.MainWindowTitle.ToLower().Contains(search))).ToArray();
+        Process[] programs = Process.GetProcesses()
+            .Where(p => p.Id != Project.CurrentProcess.Id && IsWindowVisible(p.MainWindowHandle) && (p.ProcessName.ToLower().Contains(search) || p.MainWindowTitle.ToLower().Contains(search)))
+            .ToArray();
 
         if (programs.Length < 1)
         {

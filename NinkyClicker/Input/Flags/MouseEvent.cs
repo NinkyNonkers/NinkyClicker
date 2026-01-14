@@ -3,7 +3,7 @@
 [Flags]
 public enum MouseEvent : uint
 {
-    /// <summary>
+        /// <summary>
         /// Specifies that movement occurred.
         /// </summary>
         Move = 0x0001,
