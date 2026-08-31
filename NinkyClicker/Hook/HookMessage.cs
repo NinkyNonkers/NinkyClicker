@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace NinkyClicker.Keys;
+namespace NinkyClicker.Hook;
 
 [StructLayout(LayoutKind.Sequential)]
 public class HookMessage

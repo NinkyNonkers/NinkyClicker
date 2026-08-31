@@ -1,47 +1,22 @@
-﻿using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
-using NinkyClicker.Keys;
+﻿using NinkyClicker.Keys;
+using NinkyClicker.Virtual;
 using NinkyNonk.Shared.Environment;
+using NinkyNonk.Shared.Framework.Exception;
 
 namespace NinkyClicker;
 
-[SuppressMessage("Interoperability", "CA1416:Validate platform compatibility")]
 public abstract class Clicker : IDisposable
 {
-    private uint _shouldClick = 1;
-    private bool _isLeftClick;
-    private bool _isRightClick;
-    private uint _clicks;
+    protected uint ShouldClick = 1;
+    protected bool IsLeftClick;
+    protected bool IsRightClick;
     
-    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    private static extern IntPtr SetWindowsHookEx(int idHook, MouseProc lpfn, IntPtr hMod, uint dwThreadId);
-
-    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool UnhookWindowsHookEx(IntPtr hhk);
-
-    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
-
-    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    private static extern IntPtr GetModuleHandle(string lpModuleName);
-    
-    [DllImport("user32.dll")]
-    private static extern bool GetMessage(out HookMessage lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
-
-    [DllImport("user32.dll")]
-    private static extern bool TranslateMessage(ref HookMessage lpMsg);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr DispatchMessage(ref HookMessage lpMsg);
-    
-    private delegate IntPtr MouseProc(int nCode, IntPtr wParam, IntPtr lParam);
-    private static IntPtr _hookId;
-
-    protected int SleepTime { get; }
+    public int SleepTime { get; }
+    public ClickExecutor Executor { get; set; }
     public bool Running { get; private set; }
     public ClickerConfiguration Configuration { get; }
+    
+    private uint _clicks;
     
     protected Clicker(ushort cps)
     {
@@ -59,36 +34,11 @@ public abstract class Clicker : IDisposable
 
     public void Start()
     {
-        Project.LoggingProxy.LogInfo($"Starting {GetType().Name}...");
+        if (Executor == null)
+            throw new FatalException("Executor is null");
         
-        Thread t = new Thread(() =>
-        {
-            Project.LoggingProxy.LogInfo("Adding hooks...");
-            Process curProcess = Process.GetCurrentProcess();
-            using ProcessModule curModule = curProcess.MainModule!;
-            _hookId = SetWindowsHookEx(14, HookCallback, GetModuleHandle(curModule.ModuleName), 0);
-            while (Running && GetMessage(out HookMessage msg, IntPtr.Zero, 0, 0))
-            {
-                try
-                {
-                    TranslateMessage(ref msg);
-                    DispatchMessage(ref msg);
-                }
-                catch (Exception e)
-                {
-                    Project.LoggingProxy.LogError(e.ToString());
-                }
-            }
-            Project.LoggingProxy.LogInfo("Removing hooks...");
-            UnhookWindowsHookEx(_hookId);
-            _hookId = IntPtr.Zero;
-            if (Running)
-                Dispose();
-        });
-        
-        t.SetApartmentState(ApartmentState.STA);
-        t.IsBackground = true;
-        t.Start();
+        Project.LoggingProxy.LogInfo($"Initialising {GetType().Name} using {Executor.GetType().Name}...");
+        Initialise();
         
         Project.LoggingProxy.LogInfo("Queuing worker threads...");
         ThreadPool.QueueUserWorkItem(_ => ClickThread());
@@ -98,54 +48,20 @@ public abstract class Clicker : IDisposable
         Project.LoggingProxy.LogSuccess($"Started a new {GetType().Name} successfully");
     }
     
-    private void ModifyThread()
+    protected virtual void ModifyThread()
     {
         while (Running)
         {
-            bool shouldClick = !KeyHelper.IsHeld(VirtualKey.LControl);
-            if (_shouldClick == 1 && !shouldClick)
-                Interlocked.Decrement(ref _shouldClick);
-            else if (_shouldClick == 0 && shouldClick)
-                Interlocked.Increment(ref _shouldClick);
+            bool shouldClick = !VirtualKeyHelper.IsHeld(VirtualKey.LControl);
+            if (ShouldClick == 1 && !shouldClick)
+                Interlocked.Decrement(ref ShouldClick);
+            else if (ShouldClick == 0 && shouldClick)
+                Interlocked.Increment(ref ShouldClick);
         }
     }
-    
-    private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+
+    protected virtual void Initialise()
     {
-        try
-        {
-            if (nCode < 0)
-                return CallNextHookEx(_hookId, nCode, wParam, lParam);
-
-            MSLLHOOKSTRUCT hookStruct = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
-
-            if ((hookStruct.flags & 0x00000001) != 0) //if Clicker-generated
-                return CallNextHookEx(_hookId, nCode, wParam, lParam);
-        
-            switch ((KeyMouseEvent) wParam)
-            {
-                case KeyMouseEvent.WmLbuttonup:
-                    _isLeftClick = false;
-                    break;
-                case KeyMouseEvent.WmLbuttondown:
-                    _isLeftClick = true;
-                    break;
-                case KeyMouseEvent.WmRbuttonup:
-                    _isRightClick = false;
-                    break;
-                case KeyMouseEvent.WmRbuttondown:
-                    _isRightClick = true;
-                    break;
-            }
-
-            return CallNextHookEx(_hookId, nCode, wParam, lParam);
-        }
-        catch (Exception e)
-        {
-            Project.LoggingProxy.LogError(e.ToString());
-        }
-        
-        return CallNextHookEx(_hookId, nCode, wParam, lParam);
     }
 
     private void LogThread()
@@ -164,18 +80,18 @@ public abstract class Clicker : IDisposable
     {
         while (Running)
         {
-            if (_shouldClick == 0 || (!_isLeftClick && !_isRightClick))
+            if (ShouldClick == 0 || (!IsLeftClick && !IsRightClick))
                 continue;
             
             Interlocked.Increment(ref _clicks);
 
             try
             {
-                if (_isLeftClick)
-                    LeftClick();
+                if (IsLeftClick)
+                    Executor.LeftClick();
             
-                if (_isRightClick)
-                    RightClick();
+                if (IsRightClick)
+                    Executor.RightClick();
             }
             catch (Exception e)
             {
@@ -183,9 +99,6 @@ public abstract class Clicker : IDisposable
             }
         }
     }
-
-    protected abstract void LeftClick();
-    protected abstract void RightClick();
     
     public void Dispose()
     {

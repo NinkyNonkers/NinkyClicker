@@ -1,43 +1,46 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using NinkyClicker.Keys;
 using NinkyNonk.Shared.Environment;
 
 namespace NinkyClicker.Message;
 
-public class MessageClicker : Clicker
+public class MessageClickExecutor : ClickExecutor
 {
     private readonly Process _proc;
+    private readonly Clicker _parent;
     
-    public MessageClicker(ushort cps, Process proc) : base(cps)
+    public MessageClickExecutor(Process proc, Clicker parent)
     {
         _proc = proc;
+        _parent = parent;
         _proc.Exited += (_, _) => CheckProcess();
     }
 
-    protected override void LeftClick()
+    public override void LeftClick()
     {
         CheckProcess();
         _proc.Send(PushType.Down, MessageParameter.LButton, VirtualKey.LButton);
-        Thread.Sleep(SleepTime / 2 + 5);
+        Thread.Sleep(_parent.SleepTime / 2 + 5);
         _proc.Send(PushType.Up, MessageParameter.LButton, VirtualKey.LButton);
-        Thread.Sleep(SleepTime / 2);
+        Thread.Sleep(_parent.SleepTime / 2);
     }
 
-    protected override void RightClick()
+    public override void RightClick()
     {
         CheckProcess();
         _proc.Send(PushType.Down, MessageParameter.RButton, VirtualKey.RButton);
-        Thread.Sleep(SleepTime / 2 + 5);
+        Thread.Sleep(_parent.SleepTime / 2 + 5);
         _proc.Send(PushType.Up, MessageParameter.RButton, VirtualKey.RButton);
-        Thread.Sleep(SleepTime / 2);
+        Thread.Sleep(_parent.SleepTime / 2);
     }
 
     private void CheckProcess()
     {
-        if (_proc is { HasExited: false } || !Running)
+        if (_proc is { HasExited: false } || !_parent.Running)
             return;
         
         Project.LoggingProxy.LogFatal("Target process has closed.");
-        Dispose();
+        _parent.Dispose();
     }
 }

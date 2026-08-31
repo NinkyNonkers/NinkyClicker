@@ -2,8 +2,10 @@
 
 using System.Diagnostics;
 using NinkyClicker;
+using NinkyClicker.Hook;
 using NinkyClicker.Input;
 using NinkyClicker.Message;
+using NinkyClicker.Virtual;
 using NinkyNonk.Shared.Environment;
 
 Project.LoggingProxy.LogProgramInfo();
@@ -20,7 +22,7 @@ switch (args.Length)
     case 1:
         cpsEntry = args[0];
         break;
-    case 2:
+    case > 1:
         cpsEntry = args[0];
         Project.LoggingProxy.LogInfo("Obtaining handle for " + args[1] + "...");
         program = Process.GetProcesses().First(p => p.Id != Project.CurrentProcess.Id && (p.ProcessName.ToLower().Contains(args[1]) || p.MainWindowTitle.ToLower().Contains(args[1])));
@@ -28,16 +30,28 @@ switch (args.Length)
 }
 
 ushort cps = ushort.Parse(cpsEntry);
+
+if (args.Length == 3)
+{
+    if (args[2] == "virtual")
+        c = new VirtualClicker(cps);
+    else
+        c = new HookClicker(cps);
+}
+else if (Project.LoggingProxy.AskInputBool("Use virtual clicking? (better performance but limited compatibility)"))
+    c = new VirtualClicker(cps);
+else
+    c = new HookClicker(cps);
+
 Project.LoggingProxy.LogUpdate("Specific program clicking does not support all applications; use global clicker instead where possible");
 if (program == null && !Project.LoggingProxy.AskInputBool("Specific program?"))
-    c = new InputClicker(cps);
+    c.Executor = new InputClickExecutor(c);
 else
 {
     while (program == null)
         program = ProcessHelper.SearchProcesses(Project.LoggingProxy.AskInput("Search processes: "));
-    c = new MessageClicker(cps, program);
+    c.Executor = new MessageClickExecutor(program, c);
 }
-
 
 c.Start();
 

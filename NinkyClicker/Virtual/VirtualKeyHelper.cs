@@ -1,9 +1,11 @@
 ﻿using System.Runtime.InteropServices;
+using NinkyClicker.Keys;
+
 #pragma warning disable CA1416
 
-namespace NinkyClicker.Keys;
+namespace NinkyClicker.Virtual;
 
-public static class KeyHelper
+public static class VirtualKeyHelper
 {
     [DllImport("User32.dll")]
     private static extern short GetAsyncKeyState(int vKey);

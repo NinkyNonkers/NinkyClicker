@@ -1,6 +1,6 @@
-﻿namespace NinkyClicker.Keys;
+﻿namespace NinkyClicker.Hook;
 
-public enum KeyMouseEvent : int
+public enum HookMouseEvent : int
 {
     WmMousemove     = 0x0200,
     WmLbuttondown   = 0x0201,
